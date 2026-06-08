@@ -27,8 +27,8 @@ const client = new Client({
   ]
 })
 
-const PANEL_CHANNEL_ID = '1510954258118479944'
-const STATUS_CHANNEL_ID = '1510956160549781545'
+const PANEL_CHANNEL_ID = '1513495154151915530'
+const STATUS_CHANNEL_ID = '1513496686352142527'
 const MAX_SLOTS = 7
 
 const registrations = new Map()
