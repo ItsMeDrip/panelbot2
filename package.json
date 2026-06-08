@@ -1,0 +1,10 @@
+{
+  "name": "my-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "mineflayer": "^4.14.0"
+  }
+}
