@@ -81,14 +81,21 @@ function buildBotModal(customId, title, bot = {}) {
   const registerInput = new TextInputBuilder()
     .setCustomId('registerCommand')
     .setLabel('Register Command')
-    .setPlaceholder('/register gavapaca gavapaca')
+    .setPlaceholder('/register password password')
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
 
   const loginInput = new TextInputBuilder()
     .setCustomId('loginCommand')
     .setLabel('Login Command')
-    .setPlaceholder('/login gavapaca')
+    .setPlaceholder('/login password')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+
+  const extraInput = new TextInputBuilder()
+    .setCustomId('extraCommand')
+    .setLabel('Extra Command')
+    .setPlaceholder('/arena')
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
 
@@ -96,12 +103,14 @@ function buildBotModal(customId, title, bot = {}) {
   if (bot.ip) addressInput.setValue(`${bot.ip}:${bot.port}`)
   if (bot.registerCommand) registerInput.setValue(bot.registerCommand)
   if (bot.loginCommand) loginInput.setValue(bot.loginCommand)
+  if (bot.extraCommand) extraInput.setValue(bot.extraCommand)
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),
     new ActionRowBuilder().addComponents(addressInput),
     new ActionRowBuilder().addComponents(registerInput),
-    new ActionRowBuilder().addComponents(loginInput)
+    new ActionRowBuilder().addComponents(loginInput),
+    new ActionRowBuilder().addComponents(extraInput)
   )
 
   return modal
@@ -360,6 +369,7 @@ client.on('interactionCreate', async (interaction) => {
     const address = interaction.fields.getTextInputValue('botAddress').trim()
     const registerCommand = interaction.fields.getTextInputValue('registerCommand').trim()
     const loginCommand = interaction.fields.getTextInputValue('loginCommand').trim()
+    const extraCommand = interaction.fields.getTextInputValue('extraCommand').trim()
     const parsedAddress = parseServerAddress(address)
 
     if (!name) {
@@ -392,6 +402,7 @@ client.on('interactionCreate', async (interaction) => {
         port,
         registerCommand,
         loginCommand,
+        extraCommand,
         bot: null,
         afkInterval: null,
         movementTimeout: null,
@@ -423,6 +434,7 @@ client.on('interactionCreate', async (interaction) => {
       bot.port = port
       bot.registerCommand = registerCommand
       bot.loginCommand = loginCommand
+      bot.extraCommand = extraCommand
 
       return interaction.reply({
         content: `Updated slot ${index + 1}.\nName: ${name}\nServer: ${ip}:${port}`,
@@ -605,7 +617,15 @@ function runStartupCommands(registration, bot) {
       setTimeout(() => {
         if (!registration.bot || registration.bot !== bot) return
 
-        startRandomMovement(registration, bot)
+        if (registration.extraCommand) {
+          bot.chat(registration.extraCommand)
+        }
+
+        setTimeout(() => {
+          if (!registration.bot || registration.bot !== bot) return
+
+          startRandomMovement(registration, bot)
+        }, 2000)
       }, 2000)
     }, 2000)
   }, 3000)
