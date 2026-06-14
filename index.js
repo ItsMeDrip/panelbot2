@@ -92,10 +92,10 @@ function buildBotModal(customId, title, bot = {}) {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
 
-  const command3Input = new TextInputBuilder()
-    .setCustomId('command3')
-    .setLabel('Command 3')
-    .setPlaceholder('/arena')
+  const shouldMoveInput = new TextInputBuilder()
+    .setCustomId('shouldMove')
+    .setLabel('Bot should move?')
+    .setPlaceholder('Type yes to enable random movement')
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
 
@@ -105,14 +105,14 @@ function buildBotModal(customId, title, bot = {}) {
   if (bot.ip) addressInput.setValue(`${bot.ip}:${bot.port}`)
   if (commands[0]) command1Input.setValue(commands[0])
   if (commands[1]) command2Input.setValue(commands[1])
-  if (commands[2]) command3Input.setValue(commands[2])
+  if (bot.shouldMove) shouldMoveInput.setValue('yes')
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),
     new ActionRowBuilder().addComponents(addressInput),
     new ActionRowBuilder().addComponents(command1Input),
     new ActionRowBuilder().addComponents(command2Input),
-    new ActionRowBuilder().addComponents(command3Input)
+    new ActionRowBuilder().addComponents(shouldMoveInput)
   )
 
   return modal
@@ -236,7 +236,7 @@ client.on('interactionCreate', async (interaction) => {
           ? bot.commands.map((cmd, cmdIndex) => `${cmdIndex + 1}. ${cmd}`).join('\n')
           : 'No commands saved'
 
-        return `Slot ${index + 1}: ${bot.name}\nServer: ${bot.ip}:${bot.port}\nStatus: ${state}\nCommands:\n${commands}`
+        return `Slot ${index + 1}: ${bot.name}\nServer: ${bot.ip}:${bot.port}\nStatus: ${state}\nRandom Movement: ${bot.shouldMove ? 'Yes' : 'No'}\nCommands:\n${commands}`
       }).join('\n\n')
 
       return interaction.reply({
@@ -403,7 +403,7 @@ client.on('interactionCreate', async (interaction) => {
       : 'No commands saved'
 
     return interaction.reply({
-      content: `Selected slot ${index + 1}: ${bot.name}\nServer: ${bot.ip}:${bot.port}\nStatus: ${bot.bot ? 'Online' : 'Offline'}\nCommands:\n${commands}`,
+      content: `Selected slot ${index + 1}: ${bot.name}\nServer: ${bot.ip}:${bot.port}\nStatus: ${bot.bot ? 'Online' : 'Offline'}\nRandom Movement: ${bot.shouldMove ? 'Yes' : 'No'}\nCommands:\n${commands}`,
       components: [row],
       ephemeral: true
     })
@@ -446,7 +446,8 @@ client.on('interactionCreate', async (interaction) => {
     const address = interaction.fields.getTextInputValue('botAddress').trim()
     const command1 = interaction.fields.getTextInputValue('command1').trim()
     const command2 = interaction.fields.getTextInputValue('command2').trim()
-    const command3 = interaction.fields.getTextInputValue('command3').trim()
+    const shouldMoveText = interaction.fields.getTextInputValue('shouldMove').trim()
+    const shouldMove = shouldMoveText.toLowerCase() === 'yes'
     const parsedAddress = parseServerAddress(address)
 
     if (!name) {
@@ -464,7 +465,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const { ip, port } = parsedAddress
-    const commands = [command1, command2, command3].filter(Boolean)
+    const commands = [command1, command2].filter(Boolean)
 
     if (interaction.customId === 'register_modal') {
       if (bots.length >= MAX_SLOTS) {
@@ -479,6 +480,7 @@ client.on('interactionCreate', async (interaction) => {
         ip,
         port,
         commands,
+        shouldMove,
         bot: null,
         afkInterval: null,
         movementTimeout: null,
@@ -487,7 +489,7 @@ client.on('interactionCreate', async (interaction) => {
       })
 
       return interaction.reply({
-        content: `Registered slot ${bots.length}.\nName: ${name}\nServer: ${ip}:${port}`,
+        content: `Registered slot ${bots.length}.\nName: ${name}\nServer: ${ip}:${port}\nRandom Movement: ${shouldMove ? 'Yes' : 'No'}`,
         ephemeral: true
       })
     }
@@ -508,10 +510,11 @@ client.on('interactionCreate', async (interaction) => {
       bot.name = name
       bot.ip = ip
       bot.port = port
-      bot.commands = commands
+      bot.commands = commands.concat((bot.commands || []).slice(2))
+      bot.shouldMove = shouldMove
 
       return interaction.reply({
-        content: `Updated slot ${index + 1}.\nName: ${name}\nServer: ${ip}:${port}`,
+        content: `Updated slot ${index + 1}.\nName: ${name}\nServer: ${ip}:${port}\nRandom Movement: ${shouldMove ? 'Yes' : 'No'}`,
         ephemeral: true
       })
     }
@@ -680,7 +683,11 @@ function runStartupCommands(registration, bot) {
     if (!registration.bot || registration.bot !== bot) return
 
     if (index >= commands.length) {
-      startRandomMovement(registration, bot)
+      if (registration.shouldMove) {
+        startRandomMovement(registration, bot)
+      } else {
+        stopRandomMovement(registration)
+      }
       return
     }
 
